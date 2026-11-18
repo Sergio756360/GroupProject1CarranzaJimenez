@@ -1,135 +1,77 @@
-using JetBrains.Annotations;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.UI;
 
-//Vector2 moveDirection = new Vector2(1, 0);
 public class PlayerController : MonoBehaviour
 {
     public InputAction talkAction;
-    AudioSource audioSource;
-
-    bool broken = true;
-    Animator animator;
-    public InputAction MoveAction;
     public GameObject projectilePrefab;
-
-    Rigidbody2D rigidbody2d;
-    Vector2 move;
-    Vector2 moveDirection = new Vector2(1, 0);
-
     public float speed = 3.0f;
-
+    public float jumpForce = 7.0f;
     public int maxHealth = 5;
-    int currentHealth;
-
-    // Variables related to temporary invincibility
     public float timeInvincible = 2.0f;
-    bool isInvincible;
-    float damageCooldown;
+
+    private AudioSource audioSource;
+    private Animator animator;
+    private Rigidbody2D rigidbody2d;
+    private Vector2 move;
+    private Vector2 moveDirection = Vector2.right;
+    private int currentHealth;
+    private bool isGrounded = true;
+    private bool isInvincible;
+    private float damageCooldown;
 
     public int health { get { return currentHealth; } }
-    //int currentHealth = 1;
 
-
-    // Start is called before the first frame update
-    void Start()
+    private void Start()
     {
-        //QualitySettings.vSyncCount = 0;
-        //Application.targetFrameRate = 10;
-        //Vector2 position = (Vector2)transform.position + move * 0.1f * Time.deltaTime;
-        //Vector2 position = (Vector2)transform.position + move * 3.0f * Time.deltaTime;
-
-        MoveAction.Enable();
         rigidbody2d = GetComponent<Rigidbody2D>();
         animator = GetComponent<Animator>();
-
+        audioSource = GetComponent<AudioSource>();
         currentHealth = maxHealth;
 
-        talkAction.Enable();
-
-        audioSource = GetComponent<AudioSource>();
-
-
+        if (talkAction != null)
+            talkAction.Enable();
     }
 
-    // Update is called once per frame
-    void Update()
+    private void Update()
     {
-        move = MoveAction.ReadValue<Vector2>();
+        move = new Vector2(
+            (Input.GetKey(KeyCode.D) ? 1.0f : 0.0f) - (Input.GetKey(KeyCode.A) ? 1.0f : 0.0f),
+            0.0f);
 
+        if (move.x != 0.0f)
+            moveDirection = move;
 
+        if (animator != null)
         {
-            if (!Mathf.Approximately(move.x, 0.0f) || !Mathf.Approximately(move.y, 0.0f))
-            {
-                moveDirection.Set(move.x, move.y);
-                moveDirection.Normalize();
-            }
-
             animator.SetFloat("Look X", moveDirection.x);
             animator.SetFloat("Look Y", moveDirection.y);
             animator.SetFloat("Speed", move.magnitude);
+        }
 
-
-            if (Input.GetKeyDown(KeyCode.X))
-            {
-               
-            }
-
-           
-
-
+        if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
+        {
+            rigidbody2d.linearVelocity = new Vector2(rigidbody2d.linearVelocity.x, jumpForce);
+            isGrounded = false;
         }
 
         if (isInvincible)
+        {
             damageCooldown -= Time.deltaTime;
-        if (damageCooldown < 0)
-
-        {
-            isInvincible = false;
-
+            if (damageCooldown <= 0.0f)
+                isInvincible = false;
         }
+    }
 
+    private void FixedUpdate()
+    {
+        rigidbody2d.linearVelocity = new Vector2(move.x * speed, rigidbody2d.linearVelocity.y);
+    }
 
-        // FixedUpdate has the same call rate as the physics system
-
-        //void FixedUpdate()
-        {
-
-            //Vector2 position = (Vector2)rigidbody2d.position + move * 3.0f * Time.deltaTime; 
-            //rigidbody2d.MovePosition(position);
-
-        }
-
-
-
-        move = MoveAction.ReadValue<Vector2>();
-        Debug.Log(move);
-        Vector2 position = (Vector2)transform.position + move * 3f * Time.deltaTime;
-        transform.position = position;
-
-        //public void ChangeHealth(int amount) 
-
-        {
-
-            //if (if (amount < 0))
-            if (isInvincible)
-                return;
-
-            isInvincible = true;
-            damageCooldown = timeInvincible;
-
-            //animator.SetTrigger("Hit");
-
-        }
-
-
-        {
-            //currentHealth = Mathf.Clamp(currentHealth + amount, 0, maxHealth);
-            //UIHandler.instance.SetHealthValue(currentHealth / (float)maxHealth); 
-        }
-}
+    private void OnCollisionEnter2D(Collision2D collision)
+    {
+        if (collision.gameObject.CompareTag("Ground"))
+            isGrounded = true;
+    }
 }
 

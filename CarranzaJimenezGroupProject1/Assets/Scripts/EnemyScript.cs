@@ -1,51 +1,57 @@
 using UnityEngine;
-using UnityEngine.Pool;
 
 public class Enemy : MonoBehaviour
 {
     public float speed = 3.0f;
-    private Rigidbody enemyRb;
-    private GameObject player;
-
+    public float detectionRange = 8.0f;
+    public bool isHostile { get; private set; }
     public bool isBoss = false;
-
     public float spawnInterval;
-    private float nextSpawn;
-
     public int miniEnemySpawnCount;
 
-   
+    private Rigidbody2D enemyRb;
+    private Transform player;
+    private float nextSpawn;
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    private void Start()
     {
-        enemyRb = GetComponent<Rigidbody>();
-        player = GameObject.Find("Player");
+        enemyRb = GetComponent<Rigidbody2D>();
 
-        if (isBoss)
-        {
-           
-        }
+        GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
+        if (playerObject == null)
+            playerObject = GameObject.Find("Player");
+
+        if (playerObject != null)
+            player = playerObject.transform;
     }
 
-    // Update is called once per frame
-    void Update()
+    private void FixedUpdate()
     {
-        Vector3 lookDirection = (player.transform.position - transform.position).normalized;
-
-        enemyRb.AddForce(lookDirection * speed);
-
-        if (isBoss)
+        if (player != null && Vector2.Distance(transform.position, player.position) <= detectionRange)
         {
-            if (Time.time > nextSpawn)
-            {
-                nextSpawn = Time.time + spawnInterval;
-                //spawnManager.SpawnMiniEnemy(miniEnemySpawnCount);
-            }
+            isHostile = true;
+            Vector2 direction = ((Vector2)player.position - enemyRb.position).normalized;
+            enemyRb.linearVelocity = direction * speed;
         }
-        if (transform.position.y < -10)
+        else
         {
+            isHostile = false;
+            enemyRb.linearVelocity = Vector2.zero;
+        }
+
+        if (isBoss && Time.time > nextSpawn)
+        {
+            nextSpawn = Time.time + spawnInterval;
+            //spawnManager.SpawnMiniEnemy(miniEnemySpawnCount);
+        }
+
+        if (transform.position.y < -10.0f)
             Destroy(gameObject);
-        }
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, detectionRange);
     }
 }
